@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>MinecraftPlus — Мастерская карт</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'VT323', monospace;
+    background: #2c2c2c url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" fill="%23333"/><rect width="8" height="8" fill="%232a2a2a"/><rect x="8" y="8" width="8" height="8" fill="%232a2a2a"/></svg>');
+    color: #fff;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 {
+    font-size: 64px;
+    text-shadow: 4px 4px 0 #000;
+    color: #5dff5d;
+    margin: 0 0 10px;
+    text-align: center;
+  }
+  .subtitle {
+    color: #aaa;
+    font-size: 28px;
+    margin-bottom: 30px;
+    text-align: center;
+  }
+  .search {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    background: #4a4a4a;
+    color: #fff;
+    border: 3px solid #000;
+    box-shadow: inset -3px -3px 0 #2a2a2a, inset 3px 3px 0 #6a6a6a;
+    padding: 8px 14px;
+    width: 100%;
+    margin-bottom: 25px;
+  }
+  .search::placeholder { color: #888; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 20px;
+  }
+  .card {
+    background: #4a4a4a;
+    border: 3px solid #000;
+    box-shadow: inset -4px -4px 0 #2a2a2a, inset 4px 4px 0 #6a6a6a;
+    padding: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.1s;
+  }
+  .card:hover { transform: translateY(-3px); }
+  .icon {
+    font-size: 64px;
+    margin-bottom: 10px;
+    filter: drop-shadow(3px 3px 0 #000);
+  }
+  .card h2 {
+    margin: 0 0 16px;
+    font-size: 30px;
+    color: #ffeb5d;
+    word-break: break-word;
+    flex: 1;
+  }
+  .btn {
+    font-family: 'VT323', monospace;
+    font-size: 26px;
+    background: #6aaa3a;
+    color: #fff;
+    border: 3px solid #000;
+    box-shadow: inset -3px -3px 0 #3a6a1a, inset 3px 3px 0 #8aca5a;
+    padding: 8px 20px;
+    cursor: pointer;
+    text-shadow: 2px 2px 0 #000;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn:hover { background: #7aba4a; }
+  .btn:active { box-shadow: inset 3px 3px 0 #3a6a1a, inset -3px -3px 0 #8aca5a; }
+  .status {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 28px;
+    color: #aaa;
+    padding: 40px;
+  }
+  .status.error { color: #ff6a6a; }
+  footer {
+    margin-top: 50px;
+    color: #777;
+    font-size: 20px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⛏ MinecraftPlus</h1>
+  <div class="subtitle">Мастерская карт · rd-13 edition</div>
+
+  <input class="search" id="search" type="text" placeholder="🔍 Поиск карты...">
+  <div class="grid" id="grid">
+    <div class="status">⏳ Загружаем список карт...</div>
+  </div>
+
+  <footer>Сделано с ❤ для модмейкеров</footer>
+</div>
+
+<script>
+/* =========================================================
+   НАСТРОЙКИ
+   Если сайт на GitHub Pages — репозиторий определяется сам.
+   Если хостишь где-то ещё — впиши вручную:
+     const REPO = 'ТВОЙ_НИК/ИМЯ-РЕПО';
+   ========================================================= */
+const REPO = location.hostname.includes('github.io')
+  ? location.pathname.split('/')[1] + '/' + location.pathname.split('/')[1] // владелец/репо
+  : null;
+
+// Для GitHub Pages путь вида /REPO_NAME/, поэтому:
+const OWNER_REPO = (() => {
+  if (location.hostname.endsWith('github.io')) {
+    const parts = location.pathname.split('/').filter(Boolean);
+    const owner = location.hostname.replace('.github.io', '');
+    return owner + '/' + (parts[0] || '');
+  }
+  // Фоллбек — впиши вручную
+  return 'ТВОЙ_НИК/minecraftplus-workshop';
+})();
+
+const MAPS_FOLDER = 'Maps';
+const API_URL = `https://api.github.com/repos/${OWNER_REPO}/contents/${MAPS_FOLDER}`;
+
+const grid = document.getElementById('grid');
+const searchInput = document.getElementById('search');
+let allMaps = [];
+
+/* =========================================================
+   ИКОНКА по первой букве имени (красиво и автоматически)
+   ========================================================= */
+function iconFor(name) {
+  const first = name.trim().charAt(0).toUpperCase();
+  const palette = ['#ff6a6a', '#ffeb5d', '#5dff5d', '#5dc8ff', '#c85dff', '#ff9a5d'];
+  const color = palette[first.charCodeAt(0) % palette.length];
+  return `<div style="
+    width:80px;height:80px;margin:0 auto 10px;
+    background:${color};
+    border:3px solid #000;
+    box-shadow: inset -4px -4px 0 rgba(0,0,0,.3), inset 4px 4px 0 rgba(255,255,255,.2);
+    display:flex;align-items:center;justify-content:center;
+    font-size:48px;color:#fff;text-shadow:3px 3px 0 #000;
+  ">${first}</div>`;
+}
+
+/* =========================================================
+   ЗАГРУЗКА СПИСКА КАРТ через GitHub API
+   ========================================================= */
+async function loadMaps() {
+  try {
+    const res = await fetch(API_URL + '?t=' + Date.now()); // кэш-бастер
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const files = await res.json();
+
+    allMaps = files
+      .filter(f => f.type === 'file' && f.name.toLowerCase().endsWith('.zip'))
+      .map(f => ({
+        name: f.name.replace(/\.zip$/i, ''),
+        url:  f.download_url,
+        size: f.size
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+
+    if (allMaps.length === 0) {
+      grid.innerHTML = '<div class="status">📭 В папке Maps пока нет карт</div>';
+      return;
+    }
+    render();
+  } catch (e) {
+    grid.innerHTML = `<div class="status error">
+      ❌ Не удалось загрузить список карт<br>
+      <span style="font-size:20px;color:#888">${e.message}</span>
+    </div>`;
+  }
+}
+
+/* =========================================================
+   РЕНДЕР КАРТОЧЕК
+   ========================================================= */
+function render() {
+  const q = searchInput.value.toLowerCase().trim();
+  const list = allMaps.filter(m => m.name.toLowerCase().includes(q));
+
+  if (list.length === 0) {
+    grid.innerHTML = '<div class="status">😕 Ничего не найдено</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(map => `
+    <div class="card">
+      ${iconFor(map.name)}
+      <h2>${map.name}</h2>
+      <a class="btn" href="${map.url}" download>⬇ Скачать</a>
+    </div>
+  `).join('');
+}
+
+searchInput.addEventListener('input', render);
+loadMaps();
+</script>
+</body>
+</html>
