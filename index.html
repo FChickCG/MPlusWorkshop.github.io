@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>MinecraftPlus — Мастерская карт</title>
+<title>MinecraftPlus — Workshop</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
   * { box-sizing: border-box; }
@@ -56,11 +56,6 @@
     transition: transform 0.1s;
   }
   .card:hover { transform: translateY(-3px); }
-  .icon {
-    font-size: 64px;
-    margin-bottom: 10px;
-    filter: drop-shadow(3px 3px 0 #000);
-  }
   .card h2 {
     margin: 0 0 16px;
     font-size: 30px;
@@ -91,46 +86,26 @@
     padding: 40px;
   }
   .status.error { color: #ff6a6a; }
-  footer {
-    margin-top: 50px;
-    color: #777;
-    font-size: 20px;
-    text-align: center;
-  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>⛏ MinecraftPlus</h1>
-  <div class="subtitle">Мастерская карт · rd-13 edition</div>
+  <div class="subtitle">MinecraftPlus - workshop</div>
 
   <input class="search" id="search" type="text" placeholder="🔍 Поиск карты...">
   <div class="grid" id="grid">
     <div class="status">⏳ Загружаем список карт...</div>
   </div>
-
-  <footer>Сделано с ❤ для модмейкеров</footer>
 </div>
 
 <script>
-/* =========================================================
-   НАСТРОЙКИ
-   Если сайт на GitHub Pages — репозиторий определяется сам.
-   Если хостишь где-то ещё — впиши вручную:
-     const REPO = 'ТВОЙ_НИК/ИМЯ-РЕПО';
-   ========================================================= */
-const REPO = location.hostname.includes('github.io')
-  ? location.pathname.split('/')[1] + '/' + location.pathname.split('/')[1] // владелец/репо
-  : null;
-
-// Для GitHub Pages путь вида /REPO_NAME/, поэтому:
 const OWNER_REPO = (() => {
   if (location.hostname.endsWith('github.io')) {
     const parts = location.pathname.split('/').filter(Boolean);
     const owner = location.hostname.replace('.github.io', '');
     return owner + '/' + (parts[0] || '');
   }
-  // Фоллбек — впиши вручную
   return 'ТВОЙ_НИК/minecraftplus-workshop';
 })();
 
@@ -141,9 +116,6 @@ const grid = document.getElementById('grid');
 const searchInput = document.getElementById('search');
 let allMaps = [];
 
-/* =========================================================
-   ИКОНКА по первой букве имени (красиво и автоматически)
-   ========================================================= */
 function iconFor(name) {
   const first = name.trim().charAt(0).toUpperCase();
   const palette = ['#ff6a6a', '#ffeb5d', '#5dff5d', '#5dc8ff', '#c85dff', '#ff9a5d'];
@@ -158,12 +130,9 @@ function iconFor(name) {
   ">${first}</div>`;
 }
 
-/* =========================================================
-   ЗАГРУЗКА СПИСКА КАРТ через GitHub API
-   ========================================================= */
 async function loadMaps() {
   try {
-    const res = await fetch(API_URL + '?t=' + Date.now()); // кэш-бастер
+    const res = await fetch(API_URL + '?t=' + Date.now());
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const files = await res.json();
 
@@ -189,9 +158,6 @@ async function loadMaps() {
   }
 }
 
-/* =========================================================
-   РЕНДЕР КАРТОЧЕК
-   ========================================================= */
 function render() {
   const q = searchInput.value.toLowerCase().trim();
   const list = allMaps.filter(m => m.name.toLowerCase().includes(q));
